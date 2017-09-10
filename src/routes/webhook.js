@@ -3,7 +3,7 @@ const router = express.Router();
 const util = require('util');
 const Job = require('../models/Job');
 
-router.post('/github', (req, res, next) => {
+router.post('/url', (req, res, next) => {
 
     const push = req.body;
 

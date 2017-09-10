@@ -14,6 +14,12 @@ const app = express();
 
 app.use(bodyParser.json());
 
+if (process.env.NODE_ENV !== 'production') {
+    app.use('/graphiql', graphiqlExpress({
+        endpointURL: '/api/graphql'
+    }))
+}
+
 app.use('/graphql', graphqlExpress({
     schema,
     tracing: process.env.NODE_ENV !== 'production'
@@ -21,12 +27,32 @@ app.use('/graphql', graphqlExpress({
 
 app.use('/', require('./routes'));
 
-if (process.env.NODE_ENV !== 'production') {
-    app.use('/graphiql', graphiqlExpress({
-        endpointURL: '/graphql'
-    }))
-}
+
+// catch 404 and forward to error handler
+app.use(function (req, res, next) {
+    const err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+// error handler
+app.use(function (err, req, res, next) {
+    // set locals, only providing error in development
+
+    if (process.env.NODE_ENV !== 'production') {
+        console.error(err.stack);
+    }
+
+    res.status(err.status || 500).send({
+        status: err.status || 500,
+        message: err.message,
+        error: process.env.NODE_ENV === 'production' ? null : err
+    })
+});
+
 
 app.listen(config.server.port, () => {
     console.log(`cdjs is listening on port ${config.server.port}`);
 });
+
+

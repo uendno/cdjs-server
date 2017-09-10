@@ -19,16 +19,23 @@ const JobSchema = new Schema({
         default: Date.now
     },
 
-    git: {
+    repo: {
         id: {
-            type: String,
+            type: Number,
             index: true,
             require: true
         },
         name: String,
-        fullName: String
-    }
+        fullName: String,
+        private: Boolean,
+        url: String,
+        ownerAvatarUrl: String
+    },
 
+    git: {
+        type: Schema.ObjectId,
+        ref: 'Git'
+    }
 });
 
 module.exports = mongoose.model('Job', JobSchema);

@@ -13,6 +13,10 @@
     "express": "^4.15.4",
     "graphql": "^0.11.2",
     "graphql-tools": "^1.2.2",
-    "mongoose": "^4.11.10"
+    "jsonwebtoken": "^8.0.0",
+    "mongoose": "^4.11.10",
+    "parse-link-header": "^1.0.1",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.1"
   }
 }

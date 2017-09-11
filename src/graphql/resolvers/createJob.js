@@ -1,44 +1,10 @@
 const rp = require('request-promise');
-const parse = require('parse-link-header');
+const {getFullList} = require('../../helpers/github');
 const Git = require('../../models/Git');
 const Job = require('../../models/Job');
 const config = require('../../config');
 
-const getAllWebhooksForRepo = (repoFullName, accessToken) => {
-    return getWebhooksAtPage(repoFullName, accessToken, 1, []);
-};
-
-const getWebhooksAtPage = (repoFullName, accessToken, page, hooks) => {
-    return rp({
-        url: `https://api.github.com/repos/${repoFullName}/hooks`,
-        method: 'GET',
-        headers: {
-            'Authorization': `token ${accessToken}`,
-            'User-Agent': 'cd.js'
-        },
-        resolveWithFullResponse: true,
-        json: true
-    })
-        .then(res => {
-
-            const newHooks = hooks.concat(res.body);
-
-            if (!res.headers.link) {
-                return newHooks;
-            }
-
-            const parsed = parse(res.headers.link);
-
-            if (parsed.next) {
-                return getWebhooksAtPage(repoFullName, accessToken, page + 1, newHooks)
-            } else {
-                return newHooks;
-            }
-        })
-};
-
-
-module.exports = (_, {name, gitAccountId, repoFullName, cdFilePath}) => {
+module.exports = (_, {name, gitAccountId, repoFullName, branch, cdFilePath}) => {
 
     let accessToken;
 
@@ -64,13 +30,11 @@ module.exports = (_, {name, gitAccountId, repoFullName, cdFilePath}) => {
             if (found) {
                 throw new Error("A job with this name already exists.");
             } else {
-                return getAllWebhooksForRepo(repoFullName, accessToken);
+                console.log(repoFullName);
+                return getFullList(`https://api.github.com/repos/${repoFullName}/hooks`, accessToken);
             }
         })
         .then((hooks) => {
-
-            console.log(hooks);
-
             // Check if webhook is already added
             const found = hooks.find(hook => hook.config.url === config.webHook.url);
 
@@ -108,7 +72,7 @@ module.exports = (_, {name, gitAccountId, repoFullName, cdFilePath}) => {
                     'User-Agent': 'cd.js'
                 },
                 json: true
-            });
+            })
         })
         .then(repo => {
             const job = new Job({
@@ -120,7 +84,8 @@ module.exports = (_, {name, gitAccountId, repoFullName, cdFilePath}) => {
                     id: repo.id,
                     private: repo.private,
                     url: repo.html_url,
-                    ownerAvatarUrl: repo.owner.avatar_url
+                    ownerAvatarUrl: repo.owner.avatar_url,
+                    branch
                 },
                 cdFilePath: cdFilePath
             });

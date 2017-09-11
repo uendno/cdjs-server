@@ -29,7 +29,11 @@ const JobSchema = new Schema({
         fullName: String,
         private: Boolean,
         url: String,
-        ownerAvatarUrl: String
+        ownerAvatarUrl: String,
+        branch: {
+            type: String,
+            default: "master"
+        }
     },
 
     git: {

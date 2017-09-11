@@ -15,7 +15,9 @@ module.exports = {
 
         jobByName: (_, {name}) => {
             return Job.findOne({name});
-        }
+        },
+
+        branchesForRepo: require('./branchesForRepo')
     },
 
     Mutation: {

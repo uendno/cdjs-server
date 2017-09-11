@@ -6,7 +6,7 @@ module.exports = (_, {accountId, page}) => {
     return Git.findOne({_id: accountId})
         .then(git => {
             const accessToken = git.accessToken;
-            const url = `https://api.github.com/user/repos?page=${page}&sort=updated`;
+            const url = `https://api.github.com/user/repos?page=${page}&sort=updated&affiliation=owner`;
 
             return rp({
                 url,

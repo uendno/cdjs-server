@@ -28,16 +28,17 @@ const typeDefs = `
        url: String!
        ownerAvatarUrl: String
    }
-     
+   
    type Query {
        allJobs: [Job!]!
        allGithubAccounts: [Git!]!
        reposForAccountId(accountId: String!, page: Int): ReposRes!
        jobByName(name: String!): Job
+       branchesForRepo(accountId: String!, repoFullName: String!): [String!]!
    }
 
    type Mutation {
-       createJob(name: String!, gitAccountId: String!, repoFullName: String!, cdFilePath: String): Job!
+       createJob(name: String!, gitAccountId: String!, repoFullName: String!, branch: String!, cdFilePath: String, ): Job!
    }
 `;
 

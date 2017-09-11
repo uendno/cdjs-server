@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const {graphqlExpress, graphiqlExpress} = require('apollo-server-express');
 
 const config = require('./config');
-const schema = require('./schema');
+const schema = require('./graphql');
 const connectMongo = require('./lib/mongo-connector');
 // const {authenticate} = require('./lib/authentication');
 
@@ -25,7 +25,7 @@ app.use('/graphql', graphqlExpress({
     tracing: process.env.NODE_ENV !== 'production'
 }));
 
-app.use('/', require('./routes'));
+app.use('/', require('./rest'));
 
 
 // catch 404 and forward to error handler

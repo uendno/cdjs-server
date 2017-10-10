@@ -1,6 +1,7 @@
 'use strict';
 
 const Mongoose = require('mongoose');
+const logger = require('winston');
 
 module.exports = (uri) => {
 
@@ -8,7 +9,7 @@ module.exports = (uri) => {
 
     Mongoose.connect(uri, {useMongoClient: true}, function (err) {
         if (err) {
-            console.error(err.stack);
+            logger.error(err.stack);
             throw err;
         }
 
@@ -17,20 +18,20 @@ module.exports = (uri) => {
     // When the connection is disconnected
 
     Mongoose.connection.on('connected', function () {
-        console.log('Mongo Database connected');
+        logger.info('Mongo Database connected');
     });
 
     // When the connection is disconnected
 
     Mongoose.connection.on('disconnected', function () {
-        console.log(' Mongo Database disconnected');
+        logger.info(' Mongo Database disconnected');
     });
 
     // If the node process ends, close the mongoose connection
 
     process.on('SIGINT', function () {
         Mongoose.connection.close(function () {
-            console.log('Mongo Database disconnected through app termination');
+            logger.info('Mongo Database disconnected through app termination');
             process.exit(0);
         });
     });

@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const StateSchema = new Schema({
+    build: {
+        type: Schema.ObjectId,
+        ref: "Build"
+    },
+
     name: {
         type: String,
         require: true
@@ -21,4 +26,4 @@ const StateSchema = new Schema({
     doneAt: Date
 });
 
-module.exports = mongoose.model('Job', StateSchema);
+module.exports = mongoose.model('Stage', StateSchema);

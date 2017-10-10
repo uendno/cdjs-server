@@ -9,9 +9,23 @@ const JobSchema = new Schema({
         index: true
     },
 
+    slug: {
+        type: String,
+        require: true,
+        unique: true,
+        index: true
+    },
+
     cdFilePath: {
         type: String,
-        default: './cd.js'
+        default: 'cd.js'
+    },
+
+    description: String,
+
+    secret: {
+        require: true,
+        type: String
     },
 
     createdAt: {
@@ -19,26 +33,19 @@ const JobSchema = new Schema({
         default: Date.now
     },
 
-    repo: {
-        id: {
-            type: Number,
-            index: true,
-            require: true
-        },
-        name: String,
-        fullName: String,
-        private: Boolean,
-        url: String,
-        ownerAvatarUrl: String,
-        branch: {
-            type: String,
-            default: "master"
-        }
+    repoType: {
+        type: String,
+        enum: ['github', 'gitlab', 'bitbucket'],
+        default: 'github'
     },
-
-    git: {
+    repoUrl: String,
+    branch: {
+        type: String,
+        default: "master"
+    },
+    credential: {
         type: Schema.ObjectId,
-        ref: 'Git'
+        ref: 'Credential'
     }
 });
 

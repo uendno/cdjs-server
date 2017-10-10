@@ -1,0 +1,73 @@
+
+scalar JSON
+scalar Date
+
+type Credential {
+    _id: ID!
+    type: String!
+    name: String!
+    data: JSON!
+    createdAt: Date!
+}
+
+type Stage {
+    _id: ID!
+    status: String!
+    startAt: Date
+    doneAt: Date
+}
+
+type Build {
+    _id: ID!
+    number: Int!
+    status: String!
+    startAt: Date
+    doneAt: Date
+    pusher: JSON
+    commits: [JSON]
+    stages: [Stage]!
+}
+
+type Job {
+    _id: ID!
+    name: String!
+    repoType: String!
+    cdFilePath: String!
+    description: String
+    createdAt: Date!
+    repoUrl: String!
+    branch: String!
+    credential: Credential
+    lastBuild: Build
+    builds: [Build]!
+}
+
+type CheckJobNameRes {
+    valid: Boolean!
+    generatedSecret: String
+    webhookUrl: String
+}
+
+type CheckCredentialNameRes {
+    valid: Boolean!
+}
+
+type Query {
+    allJobs: [Job!]!
+    allCredentials: [Credential!]!
+    checkJobName(name: String! currentJobId: ID): CheckJobNameRes!
+    checkCredentialName(name: String! currentCredentialId: ID): CheckCredentialNameRes!
+    jobDetails(id: ID!): Job!
+}
+
+type Mutation {
+    createJob(name: String! repoType: String! repoUrl: String! branch: String credentialId: String secret: String! description: String cdFilePath: String): Job!
+    deleteJob(id: ID!): String!
+    updateJob(id: ID! name: String repoType: String repoUrl: String branch: String credentialId: String secret: String description: String cdFilePath: String): Job!
+
+    createCredential(name: String! type: String! username: String password: String sshLocation: String): Credential!
+    updateCredential(id: ID! name: String type: String username: String password: String sshLocation: String): Credential!
+    deleteCredential(id: ID!): String!
+
+    play(id: ID!): ID!
+}

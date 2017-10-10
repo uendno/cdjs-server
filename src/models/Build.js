@@ -10,8 +10,8 @@ const AuthorSchema = new Schema({
 const CommitSchema = new Schema({
     id: String,
     message: String,
-    author: AuthorSchema,
     committer: AuthorSchema,
+    url: String,
     addedFiles: {
         type: [String],
         default: []
@@ -31,37 +31,58 @@ const CommitSchema = new Schema({
     }
 });
 
-const OwnerSchema = new Schema({
-    id: String,
-    username: String
-});
-
 const BuildSchema = new Schema({
+    number: {
+        type: Number
+    },
+    job: {
+        type: Schema.ObjectId,
+        ref: "Job"
+    },
     status: {
         type: String,
-        enum: ['pending', 'building', 'failed', 'success'],
+        enum: ['pending', 'preparing', 'building', 'failed', 'success'],
         default: 'pending'
     },
 
-    startAt: {
+    createdAt:{
         type: Date,
-        default: Date.now
+        default: Date.now,
+    },
+
+    startAt: {
+        type: Date
     },
 
     doneAt: {
         type: Date
     },
 
-    cdFile: {
-        type: String
-    },
-
-    commits: {
-        type: [CommitSchema],
+    stages: {
+        type: [Schema.ObjectId],
+        ref: 'Stage',
         default: []
     },
 
-    pusher: OwnerSchema
+    commit: {
+        type: CommitSchema
+    }
 });
 
-module.exports = mongoose.model('Job', BuildSchema);
+BuildSchema.pre('save', function (next) {
+
+    if (this.isNew) {
+        this.constructor.count({job: this.job})
+            .then(number => {
+
+                console.log(number);
+
+                this.number = number;
+                return next();
+            })
+    } else {
+        next();
+    }
+});
+
+module.exports = mongoose.model('Build', BuildSchema);

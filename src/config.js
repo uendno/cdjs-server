@@ -4,8 +4,7 @@ module.exports = {
     },
 
     webHook: {
-        url: process.env.CDJS_PUBLIC_URL + "/api/webhook/url",
-        name: process.env.CDJS_WEBHOOK_NAME
+        url: process.env.CDJS_PUBLIC_URL + "/api/webhook"
     },
 
     server: {
@@ -25,5 +24,7 @@ module.exports = {
     auth: {
         jwtSecret: process.env.JWT_SECRET,
         jwtExpire: process.env.JWT_EXPIRE
-    }
+    },
+
+    workspace: process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'] + '/cdjs'
 };

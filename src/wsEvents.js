@@ -1,3 +1,7 @@
 module.exports = {
-    BUILD_STATUS: 'BUILD_STATUS'
+    BUILD_STATUS: 'BUILD_STATUS',
+    READ_LOG: 'READ_LOG',
+    CANCEL_READ_LOG: 'CANCEL_READ_LOG',
+    LOG_DATA: 'LOG_DATA',
+    ERROR: 'ERROR'
 };

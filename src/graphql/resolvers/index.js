@@ -2,6 +2,7 @@ const GraphQLJSON = require('graphql-type-json');
 const GraphQLDate = require('graphql-date');
 const job = require('./job');
 const credential = require('./credential');
+const build = require('./build');
 
 module.exports = {
     JSON: GraphQLJSON,
@@ -13,10 +14,12 @@ module.exports = {
         checkCredentialName: credential.checkCredentialName,
         allCredentials: credential.allCredentials,
         jobDetails: job.jobDetails,
+        buildDetails: build.buildDetails
     },
 
     Mutation: {
         createJob: job.createJob,
+        updateJob: job.updateJob,
         deleteJob: job.deleteJob,
         createCredential: credential.createCredential,
         updateCredential: credential.updateCredential,
@@ -26,6 +29,7 @@ module.exports = {
 
     Job: {
         lastBuild: job.lastBuild,
-        builds: job.builds
-    }
+        builds: job.builds,
+        webhookUrl: job.webhookUrl
+    },
 };

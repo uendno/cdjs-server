@@ -35,17 +35,17 @@ type Job {
     cdFilePath: String!
     description: String
     createdAt: Date!
-    repoUrl: String!
+    repoUrl: String
     branch: String!
-    credential: Credential
+    credential: ID
     lastBuild: Build
     builds: [Build]!
+    webhookUrl: String!
+    status: String!
 }
 
 type CheckJobNameRes {
     valid: Boolean!
-    generatedSecret: String
-    webhookUrl: String
 }
 
 type CheckCredentialNameRes {
@@ -58,16 +58,17 @@ type Query {
     checkJobName(name: String! currentJobId: ID): CheckJobNameRes!
     checkCredentialName(name: String! currentCredentialId: ID): CheckCredentialNameRes!
     jobDetails(id: ID!): Job!
+    buildDetails(id: ID!): Build!
 }
 
 type Mutation {
-    createJob(name: String! repoType: String! repoUrl: String! branch: String credentialId: String secret: String! description: String cdFilePath: String): Job!
+    createJob(name: String!): Job!
     deleteJob(id: ID!): String!
-    updateJob(id: ID! name: String repoType: String repoUrl: String branch: String credentialId: String secret: String description: String cdFilePath: String): Job!
+    updateJob(id: ID! name: String repoType: String repoUrl: String branch: String credentialId: String description: String cdFilePath: String): Job!
 
     createCredential(name: String! type: String! username: String password: String sshLocation: String): Credential!
     updateCredential(id: ID! name: String type: String username: String password: String sshLocation: String): Credential!
     deleteCredential(id: ID!): String!
 
-    play(id: ID!): ID!
+    play(id: ID!): Build!
 }

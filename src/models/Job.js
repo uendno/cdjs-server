@@ -1,3 +1,4 @@
+const slugify = require('slug');
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -11,7 +12,6 @@ const JobSchema = new Schema({
 
     slug: {
         type: String,
-        require: true,
         unique: true,
         index: true
     },
@@ -22,11 +22,6 @@ const JobSchema = new Schema({
     },
 
     description: String,
-
-    secret: {
-        require: true,
-        type: String
-    },
 
     createdAt: {
         type: Date,
@@ -46,7 +41,24 @@ const JobSchema = new Schema({
     credential: {
         type: Schema.ObjectId,
         ref: 'Credential'
+    },
+    status: {
+        type: String,
+        default: 'draft'
     }
+});
+
+JobSchema.pre('save', function (next) {
+    if (this.isNew) {
+        this.slug = slugify(this.name);
+    }
+    console.log(this.repoUrl);
+
+    if (this.repoUrl) {
+        this.status = 'active';
+    }
+
+    next();
 });
 
 module.exports = mongoose.model('Job', JobSchema);

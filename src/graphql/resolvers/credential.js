@@ -1,6 +1,6 @@
 const Credential = require('../../models/Credential');
-const logger = require('winston');
 const _ = require('lodash');
+const hidePasswordIfNeeded = require('../../helpers/credentials').hidePasswordIfNeeded;
 
 exports.checkCredentialName = (_, {name, currentCredentialId}) => {
     return Credential.findOne({
@@ -80,17 +80,3 @@ exports.deleteCredential = (_, {id}) => {
         .then(() => "Done!");
 };
 
-const hidePasswordIfNeeded = (credential) => {
-    const json = credential.toJSON();
-    if (credential.type === 'username/password') {
-
-        const omittedData = _.assign(json.data, {password: '********'});
-
-        return _.assign(json, {
-            data: omittedData
-        });
-
-    } else {
-        return json;
-    }
-};

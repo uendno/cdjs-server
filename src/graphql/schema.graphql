@@ -1,4 +1,3 @@
-
 scalar JSON
 scalar Date
 
@@ -12,6 +11,7 @@ type Credential {
 
 type Stage {
     _id: ID!
+    name: String!
     status: String!
     startAt: Date
     doneAt: Date
@@ -23,9 +23,9 @@ type Build {
     status: String!
     startAt: Date
     doneAt: Date
-    pusher: JSON
-    commits: [JSON]
+    commit: JSON
     stages: [Stage]!
+    agent: Agent
 }
 
 type Job {
@@ -44,6 +44,17 @@ type Job {
     status: String!
 }
 
+type Agent {
+    _id: ID!
+    name: String!
+    ip: String
+    status: String!
+    enabled: Boolean
+    createdAt: Date
+    lastOnline: Date
+    numberOfConcurrentBuilds: Int
+}
+
 type CheckJobNameRes {
     valid: Boolean!
 }
@@ -59,16 +70,20 @@ type Query {
     checkCredentialName(name: String! currentCredentialId: ID): CheckCredentialNameRes!
     jobDetails(id: ID!): Job!
     buildDetails(id: ID!): Build!
+    allAgents: [Agent!]!
+    checkAgentName(name: String!, currentAgentId: ID): JSON!
 }
 
 type Mutation {
     createJob(name: String!): Job!
     deleteJob(id: ID!): String!
     updateJob(id: ID! name: String repoType: String repoUrl: String branch: String credentialId: String description: String cdFilePath: String): Job!
-
     createCredential(name: String! type: String! username: String password: String sshLocation: String): Credential!
     updateCredential(id: ID! name: String type: String username: String password: String sshLocation: String): Credential!
     deleteCredential(id: ID!): String!
-
     play(id: ID!): Build!
+    udpateBuild(id: ID!, status: String, stages: [ID!]): Build!
+    addAgent(name: String!): JSON!
+    updateAgent(id: ID!, name: String, enabled: Boolean, numberOfConcurrentBuilds: Int): Agent!
+    deleteAgent(id: ID!): String!
 }

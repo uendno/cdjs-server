@@ -3,13 +3,8 @@ const fs = require('fs');
 const rmdir = require('rmdir');
 const Job = require('../../models/Job');
 const Build = require('../../models/Build');
-const Stage = require('../../models/Stage');
 const config = require('../../config');
 const buildSrv = require('../../services/build');
-const queueSrv = require('../../services/queue');
-const eventEmitter = require('../../services/events');
-const wsEvents = require('../../wsEvents');
-const credentialLoader = require('../../helpers/dataloaders').credentialLoader
 
 exports.checkJobName = (root, {name, currentJobId}) => {
     return Job.findOne(
@@ -71,6 +66,8 @@ exports.updateJob = (root, {id, name, repoType, repoUrl, branch, credentialId, d
         cdFilePath
     }, _.identity);
 
+    console.log(data);
+
     return Job.findOne({
         _id: id
     })
@@ -91,13 +88,6 @@ exports.deleteJob = (root, {id}) => {
     return Build.find({job: id})
         .then(builds => {
             buildIds = builds.map(b => b._id)
-        })
-        .then(() => {
-            return Stage.remove({
-                build: {
-                    $in: buildIds
-                }
-            })
         })
         .then(() => {
             return Build.remove({job: id});
@@ -131,55 +121,19 @@ exports.deleteJob = (root, {id}) => {
 };
 
 exports.play = (root, {id}) => {
-    let job;
-
-    return Job.findOne({
-        _id: id
-    })
-        .populate('credential')
-        .then(res => {
-            job = res;
-
-            if (!job) {
-                throw new Error('Job not found.')
-            }
-
-            if (job.status !== 'active') {
-                throw new Error('Can\'t process this job');
-            }
-
-            // create new build
-            const build = new Build({
-                job: job._id,
-                status: 'pending'
-            });
-
-            return build.save();
-        })
-        .then(build => {
-
-            eventEmitter.emit(wsEvents.BUILD_STATUS, {
-                job: job._id,
-                build
-            });
-
-            const task = buildSrv(job, build);
-            queueSrv.push(task);
-
-            return build;
-        });
+    return buildSrv.createBuild(id);
 };
 
 exports.lastBuild = ({_id}) => {
     return Build.findOne({job: _id})
         .sort({createdAt: -1})
-        .populate('stages');
 };
 
 exports.builds = ({_id}) => {
     return Build.find({job: _id})
         .sort({createdAt: -1})
-        .populate('stages');
+        .populate('stages')
+        .populate('agent', '_id name status')
 };
 
 exports.jobDetails = (root, {id}) => {

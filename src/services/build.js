@@ -1,18 +1,19 @@
-const simpleGit = require('simple-git/promise');
-const slugify = require('slug');
-const spawn = require('child_process').spawn;
-const path = require('path');
 const Promise = require('bluebird');
-const Url = require('url');
 const mkdirp = require('mkdirp');
-const fs = require('fs-extra');
-const queue = require('async/queue');
+const _ = require('lodash');
 const winston = require('winston');
-const Stage = require('../models/Stage');
+const Queue = require('async/queue');
 const eventEmitter = require('./events');
-const wsEvents = require('../wsEvents');
+const config = require('../config');
 const dirHelper = require('../helpers/dir');
+const Job = require('../models/Job');
+const Build = require('../models/Build');
+const agentsSrv = require('./agents');
 
+const wsEvents = config.wsEvents;
+const agentMessages = config.agentMessages;
+
+const buildSavingQueues = {};
 
 /**
  * Create source code directory if needed, notify web clients that build is starting
@@ -33,220 +34,19 @@ const prepareDir = (build, job) => {
 };
 
 /**
- * Git clone, use defined credentials
- * @param build
- * @param job
- * @param repoPath
- * @param logger
- * @returns {*}
- */
-const clone = (build, job, repoPath, logger) => {
-    const credential = job.credential;
-
-    if (!fs.existsSync(repoPath)) {
-        const url = Url.parse(job.repoUrl);
-
-        logger.info("Cloning repo at url: " + job.repoUrl);
-
-        if (credential) {
-            switch (credential.type) {
-                case 'username/password':
-                    url.auth = credential.data.username + ":" + credential.data.password
-            }
-        }
-
-        const gitCli = simpleGit();
-        return gitCli.clone(Url.format(url), repoPath);
-    }
-};
-
-/**
- * Checkout to defined branch
- * @param job
- * @param repoPath
- * @param logger
- */
-const checkout = (job, repoPath, logger) => {
-    // check out, pull and update submodules
-    const gitCli = simpleGit(repoPath);
-    const branch = job.branch;
-
-    logger.info("Pull code and checkout to branch: " + branch);
-
-    return gitCli.pull('origin', branch)
-        .then(() => gitCli.checkout(branch));
-};
-
-/**
- * Install npm packages
- * @param build
- * @param job
- * @param repoPath
- * @param logger
- */
-const npmInstall = (build, job, repoPath, logger) => {
-
-    logger.info("Runing npm install...");
-
-    const cli = spawn('yarn || npm install', {
-        cwd: repoPath,
-        shell: true,
-        stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    cli.stdout.on('data', data => logger.info(ansiEscape(data.toString())));
-    cli.stderr.on('data', data => logger.error(ansiEscape(data.toString())));
-
-    return new Promise((resolve, reject) => {
-        cli.on('close', (code) => {
-            if (code !== 0) {
-                const error = new Error('Job exited with code: ' + code);
-                error.code = code;
-                return reject(error);
-            } else {
-                return resolve();
-            }
-        });
-    })
-};
-
-/**
- * Execute cd.js file
- * @param build
- * @param job
- * @param repoPath
- * @param logger
- */
-const executeStages = (build, job, repoPath, logger) => {
-
-    const cdjsFilePath = path.join(repoPath, job.cdFilePath);
-
-    return fs.exists(cdjsFilePath)
-        .then(exists => {
-            if (!exists) {
-                throw new Error(job.cdFilePath + " does not exist!");
-            }
-
-            logger.info(`Executing cd.js file at: ${cdjsFilePath}`);
-
-            const stageUpdateQueue = queue((task, callback) => {
-                task()
-                    .then(() => {
-                        return callback();
-                    })
-                    .catch(error => {
-                        return callback(error);
-                    })
-            }, 1);
-
-            build.status = 'building';
-
-            return build.save()
-                .then(build => {
-                    const cli = spawn('node', [cdjsFilePath], {
-                        cwd: repoPath,
-                        env: {
-                            CDJS_GIT_USERNAME: job.credential && job.credential.data.username,
-                            CDJS_GIT_ACCESS_TOKEN: job.credential && job.credential.data.password
-                        },
-                        stdio: ['pipe', 'pipe', 'pipe', 'ipc']
-                    });
-
-                    cli.stdout.on('data', data => logger.info(ansiEscape(data.toString())));
-                    cli.stderr.on('data', data => logger.error(ansiEscape(data.toString())));
-
-                    cli.on('message', message => {
-                        switch (message.type) {
-                            case 'stages':
-
-                                eventEmitter.emit(wsEvents.BUILD_STATUS, {
-                                    jobId: job._id,
-                                    build: build.toJSON()
-                                });
-
-                                const promises = [];
-                                const stages = message.data;
-                                stages.forEach(name => {
-                                    const stage = new Stage({
-                                        build: build._id,
-                                        name,
-                                        status: 'pending'
-                                    });
-
-                                    promises.push(stage.save()
-                                        .then(stage => build.stages.push(stage))
-                                        .then(() => build.save()));
-                                });
-
-                                stageUpdateQueue.push(Promise.all(promises));
-                                break;
-
-                            case 'stage-start': {
-                                stageUpdateQueue.push(Stage.findAndUpdate({
-                                        build: build._id,
-                                        name: message.data
-                                    }, {
-                                        status: 'building'
-                                    })
-                                        .then(() => {
-                                            eventEmitter.emit(wsEvents.BUILD_STATUS, {
-                                                jobId: job._id,
-                                                build: build.toJSON()
-                                            })
-                                        })
-                                );
-
-                                break;
-                            }
-
-                            case 'stage-success': {
-                                stageUpdateQueue.push(Stage.findAndUpdate({
-                                    build: build._id,
-                                    name: message.data
-                                }, {
-                                    status: 'success'
-                                }));
-
-                                break;
-                            }
-
-                            case 'stage-failed': {
-                                stageUpdateQueue.push(Stage.findAndUpdate({
-                                    build: build._id,
-                                    name: message.data
-                                }, {
-                                    status: 'failed'
-                                }));
-
-                                break;
-                            }
-
-                        }
-                    });
-
-                    cli.on('close', (code) => {
-                        if (code !== 0) {
-                            const error = new Error('Job exited with code: ' + code);
-                            error.code = code;
-                            return reject(error);
-                        } else {
-                            return resolve();
-                        }
-                    });
-
-                });
-        });
-};
-
-/**
  * Save build status, notify web clients
  * @param build
  * @param job
+ * @param logger
  * @returns {Promise.<TResult>}
  */
-const complete = (build, job) => {
+const complete = (build, job, logger) => {
     build.status = 'success';
     build.doneAt = Date.now();
+
+    logger.info('Build result: PASSED', {
+        label: 'system'
+    });
 
     return build.save()
         .then(() => {
@@ -255,6 +55,38 @@ const complete = (build, job) => {
                 build: build.toJSON(),
             });
         })
+};
+
+const saveBuild = (buildId, data) => {
+    let queue = buildSavingQueues[buildId];
+
+    if (!queue) {
+        queue = Queue((task, callback) => {
+            task()
+                .then(() => {
+                    return callback();
+                })
+                .catch(error => {
+                    console.error(error.stack);
+                    return callback(error);
+                })
+        }, 1);
+
+        buildSavingQueues[buildId] = queue;
+    }
+
+    queue.push(() => Build.findOneAndUpdate({
+        _id: buildId
+    }, data, {
+        new: true
+    })
+        .populate('agent', '_id name status')
+        .then(build => {
+            eventEmitter.emit(wsEvents.BUILD_STATUS, {
+                jobId: build.job,
+                build: build.toJSON(),
+            });
+        }))
 };
 
 /**
@@ -263,25 +95,27 @@ const complete = (build, job) => {
  * @param job
  * @param error
  * @param logger
+ * @param tunnel
  * @returns {Promise.<TResult>}
  */
-const errorHandle = (build, job, error, logger) => {
-    build.status = 'failed';
-    build.doneAt = Date.now();
+const errorHandle = (build, job, error, logger, tunnel) => {
+    if (tunnel) {
+        tunnel.end();
+    }
 
-    return build.save()
-        .then(() => {
-            eventEmitter.emit(wsEvents.BUILD_STATUS, {
-                jobId: job._id,
-                build: build.toJSON(),
-                error
-            });
+    saveBuild(build._id, {
+        status: 'failed',
+        doneAt: Date.now()
+    });
 
-            console.log(error.stack);
-            logger.error(error.stack);
-
-            throw error;
-        })
+    if (logger) {
+        logger.error(error.stack);
+        logger.info('Build result: FAILED', {
+            label: 'system'
+        });
+    } else {
+        console.error(error);
+    }
 };
 
 /**
@@ -319,34 +153,205 @@ const createLogger = (buildDir) => {
     });
 };
 
-const ansiEscape = (string) => string.replace(
-    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+const createTask = (inputBuild, job) => {
+    return (agentId) => {
 
-module.exports = (job, build) => () => {
-    const repoPath = dirHelper.getRepoDir(job.name, job.repoUrl);
+        let build = inputBuild;
 
+        const debug = require('debug')('build:' + build._id.toString());
 
-    build.status = 'preparing';
-    build.startAt = Date.now();
+        build.status = 'preparing';
+        build.startAt = Date.now();
+        build.agent = agentId;
 
-    let logger;
+        let logger;
+        let tunnel;
 
-    return build.save()
+        const onMessage = (message) => {
+
+            const data = message.data;
+
+            debug('Incoming: ' + message.type);
+
+            switch (message.type) {
+                case agentMessages.LOG: {
+                    return logger[data.level || 'info'](data.message, data.options);
+                }
+
+                case agentMessages.PREPARE_DIR_COMPLETE: {
+
+                    debug('Sending: ' + agentMessages.CLONE);
+
+                    return tunnel.sendMessage({
+                        type: agentMessages.CLONE,
+                        data: {
+                            job: job.toJSON()
+                        }
+                    })
+                }
+
+                case agentMessages.CLONE_COMPLETE: {
+
+                    debug('Sending: ' + agentMessages.CHECK_OUT);
+
+                    return tunnel.sendMessage({
+                        type: agentMessages.CHECK_OUT,
+                        data: {
+                            job: job.toJSON()
+                        }
+                    })
+                }
+
+                case agentMessages.CHECK_OUT_COMPLETE: {
+
+                    debug('Sending: ' + agentMessages.NPM_INSTALL);
+
+                    return tunnel.sendMessage({
+                        type: agentMessages.NPM_INSTALL,
+                        data: {
+                            job: job.toJSON()
+                        }
+                    })
+                }
+
+                case agentMessages.NPM_INSTALL_COMPLETE: {
+                    return tunnel.sendMessage({
+                        type: agentMessages.RUN_SCRIPT,
+                        data: {
+                            build: build.toJSON(),
+                            job: job.toJSON()
+                        }
+                    })
+                }
+
+                case agentMessages.RUN_SCRIPT_COMPLETE: {
+
+                    debug('Sending: ' + agentMessages.DONE);
+
+                    return complete(build, job, logger)
+                        .then(() => {
+                            tunnel.end();
+                        })
+                }
+
+                case agentMessages.SAVE_BUILD: {
+                    const updateData = _.omit(data.build, ['_id', '_v']);
+                    return saveBuild(build._id, updateData);
+                }
+
+                case agentMessages.ERROR: {
+                    return errorHandle(build, job, data.error, logger, tunnel)
+                }
+            }
+        };
+
+        return build.save()
+            .then(build => {
+                return Build.populate(build, {
+                    path: 'agent',
+                    select: '_id name status'
+                });
+            })
+            .then(res => {
+                build = res;
+
+                eventEmitter.emit(wsEvents.BUILD_STATUS, {
+                    jobId: job._id,
+                    build: build.toJSON()
+                });
+            })
+            .then(() => {
+
+                debug('Creating tunnel');
+
+                tunnel = agentsSrv.createTunnel(agentId, build._id);
+
+                return tunnel.setOnMessage(onMessage)
+            })
+            .then(() => {
+
+                debug('Create tunnel successfully');
+
+                return prepareDir(build, job)
+            })
+            .then(buildPath => {
+                logger = createLogger(buildPath);
+            })
+            .then(() => {
+
+                debug('Sending: ' + agentMessages.PREPARE_DIR);
+
+                tunnel.sendMessage({
+                    type: agentMessages.PREPARE_DIR,
+                    data: {
+                        build: build.toJSON(),
+                        job: job.toJSON()
+                    }
+                })
+            })
+            .catch(error => errorHandle(build, job, error, logger, tunnel))
+    };
+};
+
+exports.createBuild = (jobId, push) => {
+
+    let job;
+
+    return Job.findOne({
+        _id: jobId,
+    })
+        .populate('credential')
+        .then(res => {
+            job = res;
+
+            if (!job) {
+                throw new Error('Job not found!')
+            }
+
+            if (job.status !== 'active') {
+                throw new Error('Can\' process this job!');
+            }
+
+            let build;
+
+            if (push) {
+                const commit = push.head_commit;
+                // create new build
+                build = new Build({
+                    job: jobId,
+                    status: 'pending',
+                    commit: {
+                        id: commit.id,
+                        message: commit.message,
+                        author: commit.author,
+                        url: commit.url,
+                        addedFiles: commit.added,
+                        removedFiles: commit.removed,
+                        modifiedFiles: commit.modified,
+                        createdAt: new Date(commit.timestamp)
+                    }
+                });
+
+            } else {
+                build = new Build({
+                    job: jobId,
+                    status: 'pending',
+                });
+            }
+
+            return build.save();
+        })
         .then(build => {
-            eventEmitter.emit(wsEvents.BUILD_STATUS, {
-                jobId: job._id,
-                build: build.toJSON()
-            });
-        })
-        .then(() => prepareDir(build, job))
-        .then(buildPath => {
-            logger = createLogger(buildPath);
-        })
-        .then(() => clone(build, job, repoPath, logger))
-        .then(() => checkout(job, repoPath, logger))
-        .then(() => npmInstall(build, job, repoPath, logger))
-        .then(() => executeStages(build, job, repoPath))
-        .then(() => complete(build, job))
-        .catch(error => errorHandle(build, job, error, logger))
 
+            eventEmitter.emit(wsEvents.NEW_BUILD, {
+                jobId,
+                build: build.toJSON(),
+            });
+
+            const task = createTask(build, job);
+
+            agentsSrv.assignTask(task, job.agentId);
+
+            return build;
+        });
 };

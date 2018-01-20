@@ -5,7 +5,7 @@ const queueSrv = require('../services/queue');
 const buildSrv = require('../services/build');
 const Build = require('../models/Build');
 const eventEmitter = require('../services/events');
-const wsEvents = require('../wsEvents');
+const wsEvents = require('../config').wsEvents;
 
 router.post('/:slug', (req, res, next) => {
 
@@ -34,7 +34,7 @@ router.post('/:slug', (req, res, next) => {
                 commit: {
                     id: commit.id,
                     message: commit.message,
-                    committer: commit.committer,
+                    author: commit.author,
                     url: commit.url,
                     addedFiles: commit.added,
                     removedFiles: commit.removed,
@@ -43,23 +43,19 @@ router.post('/:slug', (req, res, next) => {
                 }
             });
 
-            build.save()
+            return build.save()
                 .then(build => {
 
-                    eventEmitter.emit(wsEvents.BUILD_STATUS, {
-                        job: job._id,
-                        build: {
-                            _id: build._id,
-                            status: 'pending',
-                            startAt: build.startAt
-                        },
+                    eventEmitter.emit(wsEvents.NEW_BUILD, {
+                        jobId: job._id,
+                        build: build.toJSON(),
                     });
 
                     const task = buildSrv(job, build);
                     queueSrv.push(task);
                 });
+        })
 
-        });
 
 });
 

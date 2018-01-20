@@ -1,24 +1,33 @@
 if (process.env.NODE_ENV !== 'production') {
     const dotenv = require('dotenv');
-    dotenv.config({path: '../.env'});
+    dotenv.config();
 }
-
-
+const randomstring = require('randomstring');
 const express = require('express');
 const bodyParser = require('body-parser');
 const {graphqlExpress, graphiqlExpress} = require('apollo-server-express');
-const {execute, subscribe} = require('graphql');
 const {createServer} = require('http');
 const config = require('./src/config');
 const schema = require('./src/graphql/index');
 const connectMongo = require('./src/lib/mongo-connector');
 const setupWinston = require('./src/lib/winston');
-const dataloaders = require('./src/helpers/dataloaders');
+const redisService = require('./src/services/redis');
+const authMiddleware = require('./src/rest/middlewares/auth');
 // const {authenticate} = require('./lib/authentication');
+const userHelper = require('./src/helpers/user');
+const cleanner = require('./src/helpers/cleanner');
 
-
+// winston
 setupWinston();
-connectMongo(config.mongo.uri);
+
+// mongodb
+connectMongo(config.mongodb.uri);
+
+// redis
+redisService.connect({
+    url: config.redis.uri,
+    password: config.redis.password
+});
 
 const app = express();
 
@@ -31,7 +40,7 @@ if (process.env.NODE_ENV !== 'production') {
     }))
 }
 
-app.use('/graphql', graphqlExpress({
+app.use('/graphql', [authMiddleware], graphqlExpress({
     schema
 }));
 
@@ -64,8 +73,15 @@ const server = createServer(app);
 
 require('./src/socket')(server);
 
-server.listen(config.server.port, () => {
-    console.log(`cdjs is listening on port ${config.server.port}`);
-});
+Promise.all([
+    // Prepare admin user
+    userHelper.prepareAdminUser(),
 
-
+    // Clean DB
+    cleanner.clean()
+])
+    .then(() => {
+        server.listen(config.server.port, () => {
+            console.log(`cdjs is listening on port ${config.server.port}`);
+        });
+    });

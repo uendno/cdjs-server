@@ -45,6 +45,11 @@ const JobSchema = new Schema({
     status: {
         type: String,
         default: 'draft'
+    },
+
+    agent: {
+        type: Schema.ObjectId,
+        ref: 'Agent'
     }
 });
 

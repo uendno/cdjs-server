@@ -1,6 +1,28 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const StateSchema = new Schema({
+    build: {
+        type: Schema.ObjectId,
+        ref: "Build"
+    },
+
+    name: {
+        type: String,
+        require: true
+    },
+
+    status: {
+        type: String,
+        enum: ['pending', 'success', 'failed', 'building'],
+        default: 'pending'
+    },
+
+    startAt: Date,
+
+    doneAt: Date
+});
+
 const AuthorSchema = new Schema({
     name: String,
     email: String,
@@ -10,7 +32,7 @@ const AuthorSchema = new Schema({
 const CommitSchema = new Schema({
     id: String,
     message: String,
-    committer: AuthorSchema,
+    author: AuthorSchema,
     url: String,
     addedFiles: {
         type: [String],
@@ -45,7 +67,7 @@ const BuildSchema = new Schema({
         default: 'pending'
     },
 
-    createdAt:{
+    createdAt: {
         type: Date,
         default: Date.now,
     },
@@ -58,14 +80,15 @@ const BuildSchema = new Schema({
         type: Date
     },
 
-    stages: {
-        type: [Schema.ObjectId],
-        ref: 'Stage',
-        default: []
-    },
+    stages: [StateSchema],
 
     commit: {
         type: CommitSchema
+    },
+
+    agent: {
+        type: Schema.ObjectId,
+        ref: 'Agent'
     }
 });
 

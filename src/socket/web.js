@@ -1,5 +1,5 @@
 const eventEmitter = require('../services/events');
-const wsEvents = require('../wsEvents');
+const wsEvents = require('../config').wsEvents;
 const Build = require('../models/Build');
 const dirHelper = require('../helpers/dir');
 const logReaderSrv = require('../services/logReader');
@@ -26,11 +26,8 @@ module.exports = io => {
         };
 
         const watch = (logFile, buildId) => {
-            logReader = logReaderSrv.readFile(logFile, 10,
+            logReader = logReaderSrv.readFile(logFile, 100,
                 data => {
-
-                    console.log("length: " + data.length);
-
                     socket.emit(wsEvents.LOG_DATA, {
                         buildId,
                         data
@@ -74,6 +71,14 @@ module.exports = io => {
 
     eventEmitter.on(wsEvents.BUILD_STATUS, message => {
         io.emit(wsEvents.BUILD_STATUS, message)
+    });
+
+    eventEmitter.on(wsEvents.NEW_BUILD, message => {
+        io.emit(wsEvents.NEW_BUILD, message)
+    });
+
+    eventEmitter.on(wsEvents.AGENT_STATUS, agent => {
+        io.emit(wsEvents.AGENT_STATUS, agent);
     })
 };
 

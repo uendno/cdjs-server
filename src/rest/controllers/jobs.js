@@ -62,7 +62,8 @@ exports.details = (req, res, next) => {
         })
         .then(builds => {
             return res.sendSuccess(Object.assign(job.toJSON(), {
-                builds
+                builds,
+                webhookUrl: config.server.publicUrl + `/git-hooks?slug=${job.slug}&type=${job.repoType}`
             }))
         })
         .catch(error => {
@@ -90,7 +91,9 @@ exports.create = (req, res, next) => {
             }
         })
         .then(job => {
-            return res.sendSuccess(job.toJSON())
+            return res.sendSuccess(Object.assign(job.toJSON(), {
+                webhookUrl: config.server.publicUrl + `/git-hooks?slug=${job.slug}&type=${job.repoType}`
+            }))
         })
         .catch(error => {
             return next(error);
@@ -180,7 +183,7 @@ exports.delete = (req, res, next) => {
             return Job.remove({_id: id});
         })
         .then(() => {
-            req.sendSuccess(null);
+            res.sendSuccess(null);
         })
         .catch(error => {
             return next(error);

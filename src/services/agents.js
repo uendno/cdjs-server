@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 const Agent = require('../models/Agent');
 const queueSrv = require('./queue');
 const config = require('../config');
@@ -27,12 +28,21 @@ const removeAgentControllerBySocketId = (socketId) => {
 exports.connectAgent = (socketId, ip, token) => {
     let agent;
 
-    return Agent.findOne({
-        token,
-        status: {
-            $ne: 'online'
-        }
+    return new Promise((resolve, reject) => {
+        jwt.verify(token, config.auth.jwtSecret, (error, decoded) => {
+            if (error) return reject(error);
+
+            resolve(decoded)
+        });
     })
+        .then(decoded => {
+            return Agent.findOne({
+                _id: decoded.id,
+                status: {
+                    $ne: 'online'
+                }
+            })
+        })
         .then(res => {
 
             agent = res;

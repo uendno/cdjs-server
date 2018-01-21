@@ -3,6 +3,7 @@ const mkdirp = require('mkdirp');
 const _ = require('lodash');
 const winston = require('winston');
 const Queue = require('async/queue');
+const jwt = require('jsonwebtoken');
 const eventEmitter = require('./events');
 const config = require('../config');
 const dirHelper = require('../helpers/dir');
@@ -178,6 +179,18 @@ const createTask = (inputBuild, job) => {
                     return logger[data.level || 'info'](data.message, data.options);
                 }
 
+                case agentMessages.SET_ENV_COMPLETE: {
+                    debug('Sending: ' + agentMessages.PREPARE_DIR);
+
+                    return tunnel.sendMessage({
+                        type: agentMessages.PREPARE_DIR,
+                        data: {
+                            build: build.toJSON(),
+                            job: job.toJSON()
+                        }
+                    })
+                }
+
                 case agentMessages.PREPARE_DIR_COMPLETE: {
 
                     debug('Sending: ' + agentMessages.CLONE);
@@ -279,21 +292,24 @@ const createTask = (inputBuild, job) => {
             })
             .then(() => {
 
-                debug('Sending: ' + agentMessages.PREPARE_DIR);
+                debug('Sending: ' + agentMessages.SET_ENV);
 
                 tunnel.sendMessage({
-                    type: agentMessages.PREPARE_DIR,
+                    type: agentMessages.SET_ENV,
                     data: {
-                        build: build.toJSON(),
-                        job: job.toJSON()
+                        CDJS_UPLOAD_URL: config.server.uploadUrl,
+                        CDJS_ACCESS_TOKEN: jwt.sign({
+                            buildId: build._id,
+                            agentId
+                        }, config.auth.jwtSecret)
                     }
-                })
+                });
             })
             .catch(error => errorHandle(build, job, error, logger, tunnel))
     };
 };
 
-exports.createBuild = (jobId, push) => {
+exports.createBuild = (jobId, push, type = 'github') => {
 
     let job;
 

@@ -8,7 +8,7 @@ const config = require('../../config');
 const User = require('../../models/User');
 const validation = require('../../helpers/validation');
 const authMiddleware = require('../middlewares/auth');
-const redisClient = require('../../services/redis');
+const redisClient = require('../../services/redis').client;
 
 router.post('/login', validation.validate([
     body('email', 'Email is missing').exists().isEmail().withMessage('Must be an email'),

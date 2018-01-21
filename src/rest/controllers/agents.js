@@ -1,4 +1,5 @@
-const uuid = require('uuid');
+const jwt = require('jsonwebtoken');
+const config = require('../../config');
 const Agent = require('../../models/Agent');
 const agentSrv = require('../../services/agents');
 
@@ -27,14 +28,20 @@ exports.create = (req, res, next) => {
                 throw error;
             } else {
                 const agent = new Agent({
-                    name,
-                    token: uuid()
+                    name
                 });
                 return agent.save();
             }
         })
         .then(agent => {
-            return res.sendSuccess(agent.toJSON())
+            const token = jwt.sign({
+                id: agent._id
+            }, config.auth.jwtSecret);
+
+            return res.sendSuccess({
+                token,
+                agent: agent.toJSON()
+            });
         })
         .catch(error => {
             return next(error);

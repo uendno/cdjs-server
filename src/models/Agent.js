@@ -22,12 +22,6 @@ const AgentSchema = new Schema({
         default: 'waiting-for-connection'
     },
 
-    token: {
-        type: String,
-        required: true,
-        unique: true
-    },
-
     enabled: {
         type: Boolean,
         default: true

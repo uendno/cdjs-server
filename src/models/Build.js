@@ -89,7 +89,9 @@ const BuildSchema = new Schema({
     agent: {
         type: Schema.ObjectId,
         ref: 'Agent'
-    }
+    },
+
+    achievements: [String]
 });
 
 BuildSchema.pre('save', function (next) {

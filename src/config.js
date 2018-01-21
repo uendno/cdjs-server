@@ -9,13 +9,10 @@ module.exports = {
         prefix: 'cdjs'
     },
 
-    webHook: {
-        url: process.env.CDJS_PUBLIC_URL + "/api/webhook"
-    },
-
     server: {
         port: process.env.CDJS_SERVER_PORT,
-        publicUrl: process.env.CDJS_PUBLIC_URL + "/api"
+        publicUrl: process.env.CDJS_PUBLIC_URL + "/api",
+        uploadUrl: process.env.CDJS_PUBLIC_URL + "/api/files"
     },
 
     web: {
@@ -47,6 +44,8 @@ module.exports = {
     },
 
     agentMessages: {
+        SET_ENV: 'SET_ENV',
+        SET_ENV_COMPLETE: 'SET_ENV_COMPLETE',
         PREPARE_DIR: 'PREPARE_DIR',
         PREPARE_DIR_COMPLETE: 'PREPARE_DIR_COMPLETE',
         CLONE: 'CLONE',

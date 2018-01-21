@@ -99,7 +99,10 @@ exports.removeAgent = (id) => {
         .then(agent => {
 
             if (!agent) {
-                throw new Error('Agent not found!')
+                const error = new Error('Agent not found!');
+                error.status = 404;
+
+                throw error;
             }
 
             socketId = agent.socketId;

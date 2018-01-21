@@ -45,7 +45,9 @@ const AgentSchema = new Schema({
     numberOfConcurrentBuilds: {
         type: Number,
         default: 1
-    }
+    },
+
+    tags: [String]
 });
 
 module.exports = mongoose.model('Agent', AgentSchema);

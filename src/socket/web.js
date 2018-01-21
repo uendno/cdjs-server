@@ -47,7 +47,7 @@ module.exports = io => {
 
                     unwatch();
 
-                    const buildFolder = dirHelper.getBuildDir(build.job.name, build.number);
+                    const buildFolder = dirHelper.getBuildDir(build.job.slug, build.number);
                     const logFile = buildFolder + "/combined.log";
 
                     console.log("Start read log for build: " + buildId + " on " + logFile);

@@ -22,9 +22,9 @@ const buildSavingQueues = {};
  */
 const prepareDir = (build, job) => {
 
-    const buildPath = dirHelper.getBuildDir(job.name, build.number);
+    const buildPath = dirHelper.getBuildDir(job.slug, build.number);
 
-    // Make job directory if needed
+    // Make jobs directory if needed
     return new Promise((resolve, reject) => {
         mkdirp(buildPath, (error) => {
             if (error) return reject(error);
@@ -305,11 +305,15 @@ exports.createBuild = (jobId, push) => {
             job = res;
 
             if (!job) {
-                throw new Error('Job not found!')
+                const error = new Error('Job not found!');
+                error.status = 400;
+                throw error;
             }
 
             if (job.status !== 'active') {
-                throw new Error('Can\' process this job!');
+                const error = new Error('Can\' process this jobs!');
+                error.status = 400;
+                throw error;
             }
 
             let build;

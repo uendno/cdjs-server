@@ -2,18 +2,17 @@ if (process.env.NODE_ENV !== 'production') {
     const dotenv = require('dotenv');
     dotenv.config();
 }
-const randomstring = require('randomstring');
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const {graphqlExpress, graphiqlExpress} = require('apollo-server-express');
+
 const {createServer} = require('http');
 const config = require('./src/config');
-const schema = require('./src/graphql/index');
+
 const connectMongo = require('./src/lib/mongo-connector');
 const setupWinston = require('./src/lib/winston');
 const redisService = require('./src/services/redis');
-const authMiddleware = require('./src/rest/middlewares/auth');
-// const {authenticate} = require('./lib/authentication');
+
 const userHelper = require('./src/helpers/user');
 const cleanner = require('./src/helpers/cleanner');
 
@@ -32,17 +31,6 @@ redisService.connect({
 const app = express();
 
 app.use(bodyParser.json());
-
-if (process.env.NODE_ENV !== 'production') {
-    app.use('/graphiql', graphiqlExpress({
-        endpointURL: '/api/graphql',
-        subscriptionsEndpoint: `ws://localhost:${config.server.port}/subscriptions`
-    }))
-}
-
-app.use('/graphql', [authMiddleware], graphqlExpress({
-    schema
-}));
 
 app.use('/', require('./src/rest/index'));
 
@@ -63,9 +51,8 @@ app.use(function (err, req, res, next) {
     }
 
     res.status(err.status || 500).send({
-        status: err.status || 500,
+        success: false,
         message: err.message,
-        error: process.env.NODE_ENV === 'production' ? null : err
     })
 });
 

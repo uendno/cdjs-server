@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const Job = require('../models/Job');
-const queueSrv = require('../services/queue');
-const buildSrv = require('../services/build');
-const Build = require('../models/Build');
-const eventEmitter = require('../services/events');
-const wsEvents = require('../config').wsEvents;
+const Job = require('../../models/Job');
+const queueSrv = require('../../services/queue');
+const buildSrv = require('../../services/build');
+const Build = require('../../models/Build');
+const eventEmitter = require('../../services/events');
+const wsEvents = require('../../config').wsEvents;
 
 router.post('/:slug', (req, res, next) => {
 

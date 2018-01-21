@@ -1,14 +1,14 @@
 const gitUrlParse = require('git-url-parse');
 const config = require('../config');
 
-exports.getJobDir = (jobName) => {
-    return config.workspace + "/" + jobName;
+exports.getJobDir = (jobSlug) => {
+    return config.workspace + "/" + jobSlug;
 };
 
-exports.getRepoDir = (jobName, repoUrl) => {
-    return exports.getJobDir(jobName) + "/" + gitUrlParse(repoUrl).name;
+exports.getRepoDir = (jobSlug, repoUrl) => {
+    return exports.getJobDir(jobSlug) + "/" + gitUrlParse(repoUrl).name;
 };
 
-exports.getBuildDir = (jobName, buildNumber) => {
-    return exports.getJobDir(jobName) + "/builds/" + buildNumber;
+exports.getBuildDir = (jobSlug, buildNumber) => {
+    return exports.getJobDir(jobSlug) + "/builds/" + buildNumber;
 };

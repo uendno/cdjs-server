@@ -4,17 +4,16 @@ const _ = require('lodash');
 const {body} = require('express-validator/check');
 const router = express.Router();
 
-const config = require('../config');
-const User = require('../models/User');
-const validatorMiddleware = require('./middlewares/validator');
-const authMiddleware = require('./middlewares/auth');
-const redisClient = require('../services/redis');
+const config = require('../../config');
+const User = require('../../models/User');
+const validation = require('../../helpers/validation');
+const authMiddleware = require('../middlewares/auth');
+const redisClient = require('../../services/redis');
 
-router.post('/login', [
+router.post('/login', validation.validate([
     body('email', 'Email is missing').exists().isEmail().withMessage('Must be an email'),
     body('password', 'Password is missing').exists(),
-    validatorMiddleware
-], (req, res, next) => {
+]), (req, res, next) => {
     const email = req.body.email;
     const password = req.body.password;
     let user;

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const buildsController = require('./controllers/builds');
 
 
 router.use(require('./middlewares/decorators'));
@@ -8,6 +9,7 @@ router.use(require('./middlewares/decorators'));
 
 router.use('/auth', require('./routes/auth'));
 router.use('/git-hooks', require('./routes/git-hooks'));
+router.get('/builds/:id/files/*', buildsController.downloadFile);
 
 
 // protected

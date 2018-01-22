@@ -1,11 +1,14 @@
 const fs = require('fs-extra');
 const Path = require('path');
 const url = require('url');
+const jwt = require('jsonwebtoken');
 const AdmZip = require('adm-zip');
+const Promise = require('bluebird');
 const Build = require('../../models/Build');
 const buildSrv = require('../../services/build');
 const dirHelper = require('../../helpers/dir');
 const config = require('../../config');
+
 
 exports.details = (req, res, next) => {
     const id = req.params.id;
@@ -67,10 +70,14 @@ exports.getFiles = (req, res, next) => {
                 name: Path.basename(buildFolder)
             };
 
-            return listFiles(buildId, buildFolder, '', tree)
-                .then(() => {
-                    return tree;
-                })
+            if (!fs.existsSync(buildFolder)) {
+                return tree
+            } else {
+                return listFiles(buildId, buildFolder, '', tree)
+                    .then(() => {
+                        return tree;
+                    })
+            }
         })
         .then(tree => {
             return res.sendSuccess(tree)
@@ -85,6 +92,24 @@ exports.downloadFile = (req, res, next) => {
     let path;
     let relativePath = url.parse(req.originalUrl.replace(`/builds/${buildId}/files`, '')).pathname;
     let build;
+
+
+    const token = req.query.access_token;
+
+    if (!token) {
+        const error = new Error('Access token is required.');
+        error.status = 401;
+        return next(error);
+    }
+
+    const decoded = jwt.decode(token, config.auth.jwtSecret);
+
+    if (decoded.path !== relativePath) {
+        const error = new Error('Invalid access token');
+        error.status = 401;
+        return next(error);
+    }
+
 
     return Build.findOne({
         _id: buildId
@@ -141,7 +166,9 @@ exports.downloadFile = (req, res, next) => {
 const listFiles = (buildId, path, relativePath, tree) => {
 
     if (relativePath !== '') {
-        tree.downloadUrl = config.server.publicUrl + '/builds/' + buildId + '/files' + relativePath;
+        tree.downloadUrl = config.server.publicUrl + '/builds/' + buildId + '/files' + relativePath + '?access_token=' + jwt.sign({
+            path: relativePath
+        }, config.auth.jwtSecret);
     }
 
     return fs.stat(path)
@@ -152,20 +179,20 @@ const listFiles = (buildId, path, relativePath, tree) => {
 
                 return fs.readdir(path)
                     .then(files => {
+                        return Promise.each(files, file => {
+                            return fs.stat(path + '/' + file)
+                                .then(stats => {
+                                    if ((stats.isFile() || stats.isDirectory()) && file !== '.DS_Store') {
+                                        const child = {
+                                            name: Path.basename(file)
+                                        };
 
-                        const promises = [];
+                                        tree.children.push(child);
 
-                        files.forEach(file => {
-                            const child = {
-                                name: Path.basename(file)
-                            };
-
-                            tree.children.push(child);
-
-                            promises.push(listFiles(buildId, path + '/' + file, relativePath + '/' + file, child))
+                                        return listFiles(buildId, path + '/' + file, relativePath + '/' + file, child)
+                                    }
+                                })
                         });
-
-                        return Promise.all(promises);
                     })
             } else {
                 tree.size = stats.size;

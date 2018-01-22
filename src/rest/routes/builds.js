@@ -13,6 +13,6 @@ router.post('/', validation.validate([
 
 router.get('/:id/files', buildsController.getFiles);
 
-router.get('/:id/files/*', buildsController.downloadFile);
+
 
 module.exports = router;

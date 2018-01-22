@@ -11,4 +11,8 @@ router.post('/', validation.validate([
     body('jobId', 'Invalid jobId').exists()
 ]), buildsController.create);
 
+router.get('/:id/files', buildsController.getFiles);
+
+router.get('/:id/files/*', buildsController.downloadFile);
+
 module.exports = router;

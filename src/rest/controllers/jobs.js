@@ -103,6 +103,9 @@ exports.create = (req, res, next) => {
 exports.update = (req, res, next) => {
     const id = req.params.id;
     const data = req.body;
+    if (data.repoUrl) {
+        data.status = 'active';
+    }
 
     return Job.findOne({
         _id: id

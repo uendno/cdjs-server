@@ -2,23 +2,24 @@ const randomstring = require('randomstring');
 const User = require('../models/User');
 
 exports.prepareAdminUser = () => {
-    // Prepare admin user
-    return User.findOne({
-        email: 'admin@cdjs.com'
-    })
-        .then(user => {
-            if (!user) {
-                const password = randomstring.generate();
+  // Prepare admin user
+  return User.findOne({
+    email: 'admin@cdjs.com'
+  })
+    .then(user => {
+      if (!user) {
+        // const password = randomstring.generate();
+          const password = 12345678;
 
-                console.log("Initial username: admin@cdjs.com");
-                console.log("Initial password: " + password);
+        console.log("Initial username: admin@cdjs.com");
+        console.log("Initial password: " + password);
 
-                const admin = new User({
-                    email: 'admin@cdjs.com',
-                    password
-                });
-
-                return admin.save();
-            }
+        const admin = new User({
+          email: 'admin@cdjs.com',
+          password
         });
+
+        return admin.save();
+      }
+    });
 };

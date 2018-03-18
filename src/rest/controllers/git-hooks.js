@@ -9,7 +9,7 @@ exports.push = (req, res, next) => {
 
     res.send("OK");
 
-    Job.findOne({
+    return Job.findOne({
         slug,
         status: 'active'
     })

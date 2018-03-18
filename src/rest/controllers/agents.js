@@ -9,9 +9,7 @@ exports.list = (req, res, next) => {
         .then(agents => {
             return res.sendSuccess(agents);
         })
-        .catch(error => {
-            return next(error);
-        })
+        .catch(next)
 };
 
 exports.create = (req, res, next) => {
@@ -43,9 +41,7 @@ exports.create = (req, res, next) => {
                 agent: agent.toJSON()
             });
         })
-        .catch(error => {
-            return next(error);
-        })
+        .catch(next)
 };
 
 exports.update = (req, res, next) => {
@@ -71,11 +67,11 @@ exports.update = (req, res, next) => {
             })
         })
         .then(agent => {
+            agentSrv.changeQueueConcurrency(agent._id.toString(), agent.numberOfConcurrentBuilds);
+            agentSrv.setAgentState(agent._id.toString(), agent.enabled);
             return res.sendSuccess(agent.toJSON())
         })
-        .catch(error => {
-            return next(error);
-        })
+        .catch(next)
 };
 
 exports.delete = (req, res, next) => {
@@ -85,7 +81,5 @@ exports.delete = (req, res, next) => {
         .then(() => {
             return res.sendSuccess(null)
         })
-        .catch(error => {
-            return next(error);
-        })
+        .catch(next)
 };

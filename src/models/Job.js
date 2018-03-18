@@ -47,10 +47,7 @@ const JobSchema = new Schema({
         default: 'draft'
     },
 
-    agent: {
-        type: Schema.ObjectId,
-        ref: 'Agent'
-    }
+    agentTags: [String],
 });
 
 JobSchema.pre('save', function (next) {

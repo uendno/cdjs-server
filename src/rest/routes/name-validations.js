@@ -8,7 +8,7 @@ const nameValidationsController = require('../controllers/name-validations');
 router.post('/', validation.validate([
     body('name', 'Invalid name').exists(),
     body('currentId', 'Invalid currentId').exists(),
-    body('collection', 'Invalid collection').exists().isIn(['agents', 'jobs', 'credentials'])
+    body('collection', 'Invalid collection').exists().isIn(['agents', 'jobs', 'credentials', 'users'])
 ]),nameValidationsController.validate);
 
 module.exports = router;

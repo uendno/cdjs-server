@@ -22,12 +22,6 @@ setupWinston();
 // mongodb
 connectMongo(config.mongodb.uri);
 
-// redis
-redisService.connect({
-    url: config.redis.uri,
-    password: config.redis.password
-});
-
 const app = express();
 
 app.use(bodyParser.json());

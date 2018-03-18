@@ -12,7 +12,7 @@ exports.upload = (req, res, next) => {
     const folderName = Path.basename(req.file.originalname, '.zip');
     let build;
 
-    Build.findOne(({
+    return Build.findOne(({
         _id: buildId
     }))
         .populate('job')

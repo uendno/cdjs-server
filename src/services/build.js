@@ -370,7 +370,22 @@ exports.createBuild = (jobId, push, type = 'github') => {
 
             const task = createTask(build, job);
 
-            agentsSrv.assignTask(task, job.agentId);
+            const result = agentsSrv.assignTask(task, job.agentTags);
+
+            if (!result) {
+                build.status = 'failed';
+                return build.save()
+                    .then((build) => {
+                        eventEmitter.emit(wsEvents.NEW_BUILD, {
+                            jobId,
+                            build: build.toJSON(),
+                        });
+
+                        const error = new Error('No agent is available.');
+                        error.status = 404;
+                        throw error;
+                    })
+            }
 
             return build;
         });

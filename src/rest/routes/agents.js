@@ -3,6 +3,7 @@ const router = express.Router();
 const {body} = require('express-validator/check');
 const validation = require('../../helpers/validation');
 const agentsController = require('../controllers/agents');
+const {roleMiddleware} = require('../middlewares/auth');
 
 router.get('/', agentsController.list);
 

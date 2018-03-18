@@ -7,7 +7,6 @@ const eventEmitter = require('../services/events');
 const wsEvents = config.wsEvents;
 const agentMessages = config.agentMessages;
 
-const waitingList = [];
 const agentControllers = [];
 const listeners = [];
 
@@ -64,14 +63,10 @@ exports.connectAgent = (socketId, ip, token) => {
 
             agentControllers.push({
                 queue,
-                agentId: agent._id,
-                socketId
-            });
-
-            waitingList.filter(o => o.agentId === agent._id || !o.agentId).forEach(o => {
-                waitingList.splice(waitingList.indexOf(o), 1);
-                o.agentId = agent._id;
-                queue.push(o);
+                agentId: agent._id.toString(),
+                socketId,
+                tags: agent.tags,
+                enabled: agent.enabled,
             });
         })
 };
@@ -127,12 +122,12 @@ exports.removeAgent = (id) => {
         })
 };
 
-exports.assignTask = (task, agentId) => {
-    if (!agentId) {
+exports.assignTask = (task, agentTags) => {
+    if (agentTags.length === 0) {
         let minRate = 999;
         let selectedIndex = -1;
 
-        agentControllers.forEach((controller, index) => {
+        agentControllers.filter(c => c.enabled).forEach((controller, index) => {
             const queue = controller.queue;
             const queueLength = queue.length();
 
@@ -150,26 +145,33 @@ exports.assignTask = (task, agentId) => {
                 agentId: controller.agentId,
                 task
             });
+
+            return true;
         } else {
-            waitingList.push({
-                agentId,
-                task
-            });
+            return false;
         }
 
     } else {
-        const controller = agentControllers.find(c => c.agentId === agentId);
+        const controller = agentControllers.filter(c => c.enabled).find(c => {
+            let result = true;
+
+            agentTags.forEach(tag => {
+                if (c.tags.indexOf(tag) === -1) {
+                    result = false
+                }
+            });
+
+            return result;
+        });
 
         if (!controller) {
-            waitingList.push({
-                agentId,
-                task
-            });
+            return false;
         } else {
             controller.queue.push({
                 agentId: controller.agentId,
                 task
             });
+            return true;
         }
     }
 };
@@ -229,6 +231,24 @@ exports.createTunnel = (agentId, buildId) => {
             });
         }
     }
+};
+
+exports.changeQueueConcurrency = (agentId, concurrency) => {
+    const controller = agentControllers.find(c => c.agentId === agentId);
+
+    if (controller) {
+        controller.queue.concurrency = concurrency;
+    }
+};
+
+exports.setAgentState = (agentId, enabled) => {
+    const controller = agentControllers.find(c => c.agentId === agentId);
+
+    if (controller) {
+        controller.enabled = enabled;
+    }
+
+    console.log(controller);
 };
 
 eventEmitter.on(wsEvents.MESSAGE_FROM_AGENT, (socketId, buildId, message) => {

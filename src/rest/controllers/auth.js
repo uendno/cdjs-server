@@ -3,6 +3,8 @@ const _ = require('lodash');
 const User = require('../../models/User');
 const config = require('../../config');
 
+const redisClient = require('../../services/redis');
+
 exports.login = (req, res, next) => {
     const email = req.body.email;
     const password = req.body.password;
@@ -45,4 +47,15 @@ exports.login = (req, res, next) => {
             err.message = 'Wrong username or password.';
             next(err);
         })
+};
+
+exports.logout = (req, res, next) => {
+    redisClient.saddAsync(config.redis.prefix + ':access-token-black-list', req.headers.authorization)
+        .then(() => {
+            res.send({
+                status: 200,
+                message: 'Ok'
+            })
+        })
+        .catch(next);
 };

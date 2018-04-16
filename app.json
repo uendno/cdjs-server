@@ -1,0 +1,7 @@
+{
+  "apps" : [{
+    "name"        : "cdjs-server",
+    "script"      : "./index.js",
+    "watch"       : true
+  }]
+}

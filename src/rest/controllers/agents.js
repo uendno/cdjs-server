@@ -68,7 +68,10 @@ exports.update = (req, res, next) => {
         })
         .then(agent => {
             agentSrv.changeQueueConcurrency(agent._id.toString(), agent.numberOfConcurrentBuilds);
-            agentSrv.setAgentState(agent._id.toString(), agent.enabled);
+            agentSrv.updateAgent(agent._id.toString(), {
+                enabled: agent.enabled,
+                tags: agent.tags
+            });
             return res.sendSuccess(agent.toJSON())
         })
         .catch(next)

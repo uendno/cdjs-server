@@ -241,14 +241,14 @@ exports.changeQueueConcurrency = (agentId, concurrency) => {
     }
 };
 
-exports.setAgentState = (agentId, enabled) => {
+exports.updateAgent = (agentId, data) => {
     const controller = agentControllers.find(c => c.agentId === agentId);
 
     if (controller) {
-        controller.enabled = enabled;
+        Object.keys(data).forEach(key => {
+            controller[key] = data[key];
+        })
     }
-
-    console.log(controller);
 };
 
 eventEmitter.on(wsEvents.MESSAGE_FROM_AGENT, (socketId, buildId, message) => {

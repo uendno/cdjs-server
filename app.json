@@ -2,6 +2,8 @@
   "apps" : [{
     "name"        : "cdjs-server",
     "script"      : "./index.js",
-    "watch"       : true
+    "env": {
+      "PORT": 3001
+    }
   }]
 }

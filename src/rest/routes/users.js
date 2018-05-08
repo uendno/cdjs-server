@@ -19,7 +19,7 @@ router.post('/', validation.validate([
     body('password', 'Invalid password.').exists()
 ]), usersController.createUser);
 
-router.put('/:id/password', validation.validate([
+router.put('/password', validation.validate([
     body('oldPassword', 'Invalid oldPassword.').exists(),
     body('newPassword', 'Invalid newPassword').exists()
 ]), usersController.changePassword);

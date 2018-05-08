@@ -57,7 +57,7 @@ exports.deleteUser = (req, res, next) => {
 };
 
 exports.changePassword = (req, res, next) => {
-    const id = req.params.id;
+    const id = req.decoded._id;
     const {oldPassword, newPassword} = req.body;
 
     let user;

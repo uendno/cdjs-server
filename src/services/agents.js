@@ -192,7 +192,7 @@ exports.createTunnel = (agentId, buildId) => {
                 if (!resolved) {
                     reject(new Error('Connection time out!'))
                 }
-            }, 5000);
+            }, 30000);
 
             const initListener = (resSocketId, resBuildId) => {
                 if (controller.socketId === resSocketId && buildId.toString() === resBuildId) {
